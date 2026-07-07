@@ -6,3 +6,6 @@ wandb/
 *.pickle
 gtd_algos.egg-info
 *.pdf
+venv/
+build
+dist
