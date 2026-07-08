@@ -15,6 +15,7 @@ class ExpConfig:
     algo: str = struct.field(pytree_node=False)
     agent_config: Config = struct.field(pytree_node=False)
     env_config: Config = struct.field(pytree_node=False)
+    run_name: str = struct.field(pytree_node=False, default='')
 
     @classmethod
     def from_dict(cls: t.Type["ExpConfig"], obj: dict):
@@ -25,6 +26,7 @@ class ExpConfig:
             algo=obj["algo"],
             agent_config=Config.from_dict(obj["agent_config"]),
             env_config=Config.from_dict(obj["env_config"]),
+            run_name=obj.get("run_name", ''),
         )
 
     def to_dict(self, expand: bool = True):

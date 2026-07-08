@@ -23,8 +23,17 @@ def main(
     parser.add_argument('--config_file', type=str, default=default_config_path)
     args = parser.parse_args()
     config = ExpConfig.from_yaml(args.config_file)
+    default_name = f"{config.algo}_{config.env_config.env_name}_{config.tag}_s{config.exp_seed}"
+    run_name = config.run_name or default_name
+    print(f"{'='*60}")
+    print(f"Run: {run_name}")
+    print(f"Env:   {config.env_config.env_name}")
+    print(f"Agent: {config.algo}")
+    print(f"Agent config: {config.agent_config.d}")
+    print(f"Env config:   {config.env_config.d}")
+    print(f"{'='*60}")
     ### wandb init
-    wandb.init(config=config, project=config.wandb_project_name)
+    wandb.init(config=config, project=config.wandb_project_name, name=run_name)
     define_metrics()
     ### start experiment
     start_time = time.time()
