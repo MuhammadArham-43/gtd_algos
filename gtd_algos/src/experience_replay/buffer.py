@@ -34,7 +34,7 @@ def init_buffer(capacity: int, obs_shape: tuple, action_dim: int) -> ReplayBuffe
         size=jnp.array(0, dtype=jnp.int32)
     )
 
-@jax.jit
+@functools.partial(jax.jit, donate_argnums=(0,))
 def add_transition(buffer_state: ReplayBufferState, transition: BufferTransition) -> ReplayBufferState:
     capacity = buffer_state.obs.shape[0]
     idx = buffer_state.idx
