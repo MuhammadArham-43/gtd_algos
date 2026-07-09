@@ -9,3 +9,7 @@ gtd_algos.egg-info
 venv/
 build
 dist
+sbatch
+jobs/
+results/
+runs/
