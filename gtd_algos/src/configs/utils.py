@@ -1,5 +1,6 @@
+import ast
 import typing as t
-from typing import Callable, Optional, Dict, Any
+from typing import Callable, Optional, Dict, Any, Sequence
 from flax import struct
 from collections.abc import MutableMapping
 import itertools
@@ -81,6 +82,22 @@ def rebuild(flatten_dict, result=None):
                 break
 
     return result
+
+
+def apply_overrides(config: dict, overrides: Sequence[str]) -> dict:
+    """Apply CLI-style 'dotted.key=value' overrides onto a nested config dict in place."""
+    for override in overrides:
+        key, _, raw_value = override.partition('=')
+        try:
+            value = ast.literal_eval(raw_value)
+        except (ValueError, SyntaxError):
+            value = raw_value
+        *parents, leaf = key.split('.')
+        cur = config
+        for k in parents:
+            cur = cur.setdefault(k, {})
+        cur[leaf] = value
+    return config
 
 
 def get_configurations(params):

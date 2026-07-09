@@ -1,4 +1,4 @@
-from .utils import transform_dict, flax_struct_to_dict
+from .utils import transform_dict, flax_struct_to_dict, apply_overrides
 from flax import struct
 import typing as t
 import argparse
@@ -36,7 +36,9 @@ class ExpConfig:
         return transform_dict(exp_dict, expand)
 
     @staticmethod
-    def from_yaml(config_file: str = 'configs/gymnax_config.yaml'):
+    def from_yaml(config_file: str = 'configs/gymnax_config.yaml', overrides: t.Sequence[str] = None):
         with open(config_file, "r") as stream:
-            config = yaml.safe_load(stream)    
+            config = yaml.safe_load(stream)
+        if overrides:
+            config = apply_overrides(config, overrides)
         return ExpConfig.from_dict(config)

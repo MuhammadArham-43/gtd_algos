@@ -21,8 +21,8 @@ def main(
     # Reading config file
     parser = argparse.ArgumentParser()
     parser.add_argument('--config_file', type=str, default=default_config_path)
-    args = parser.parse_args()
-    config = ExpConfig.from_yaml(args.config_file)
+    args, overrides = parser.parse_known_args()
+    config = ExpConfig.from_yaml(args.config_file, overrides)
     default_name = f"{config.algo}_{config.env_config.env_name}_{config.tag}_s{config.exp_seed}"
     run_name = config.run_name or default_name
     print(f"{'='*60}")
