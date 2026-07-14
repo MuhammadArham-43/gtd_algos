@@ -39,8 +39,9 @@ def exp_step(
     if done:
         next_obs, _ = env.reset()
     
+    buffer_size = min(idx + 1, agent_state.agent_config.buffer_capacity)
     loss_info = {}
-    if idx >= agent_state.agent_config.warmup_steps and buffer_state.size >= agent_state.agent_config.batch_size:
+    if idx >= agent_state.agent_config.warmup_steps and buffer_size >= agent_state.agent_config.batch_size:
         for _ in range(agent_state.agent_config.update_steps):
             rng, _rng = jax.random.split(rng)
             batch = sample_transitions(buffer_state, agent_state.agent_config.batch_size, _rng)
@@ -85,7 +86,8 @@ def experiment(config: ExpConfig, agent: Agent):
     result = {}
     for i in range(agent_config.total_steps):
         runner_state, result = exp_step(runner_state, env, i, agent)
-        wandb_sac_logging(result)
+        if i % log_interval == 0 or 'episode' in result['episode_info']:
+            wandb_sac_logging(result)
         if i % log_interval == 0:
             loss_info = result.get('loss_info', {})
             loss_str = (
