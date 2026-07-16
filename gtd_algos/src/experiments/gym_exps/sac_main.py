@@ -39,9 +39,8 @@ def exp_step(
     if done:
         next_obs, _ = env.reset()
     
-    buffer_size = min(idx + 1, agent_state.agent_config.buffer_capacity)
     loss_info = {}
-    if idx >= agent_state.agent_config.warmup_steps and buffer_size >= agent_state.agent_config.batch_size:
+    if idx >= agent_state.agent_config.warmup_steps and buffer_state.size >= agent_state.agent_config.batch_size:
         for _ in range(agent_state.agent_config.update_steps):
             rng, _rng = jax.random.split(rng)
             batch = sample_transitions(buffer_state, agent_state.agent_config.batch_size, _rng)

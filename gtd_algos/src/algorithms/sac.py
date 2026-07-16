@@ -130,23 +130,23 @@ def soft_update_target_params(agent_state: AgentState, tau: float):
 
 @jax.jit
 def update_step(agent_state: AgentState, batch: BufferTransition, rng: PRNGKey):
-    critic_loss, critic_grads = jax.value_and_grad(critic_loss_fn)(agent_state.critic_network_state.params, agent_state, batch, rng)
-    critic_state = agent_state.critic_network_state.apply_gradients(grads=critic_grads)
+    critic_rng, actor_rng = jax.random.split(rng)
 
-    (actor_loss, log_prob), actor_grads = jax.value_and_grad(actor_loss_fn, has_aux=True)(agent_state.actor_network_state.params, agent_state, batch, rng)
+    critic_loss, critic_grads = jax.value_and_grad(critic_loss_fn)(agent_state.critic_network_state.params, agent_state, batch, critic_rng)
+    critic_state = agent_state.critic_network_state.apply_gradients(grads=critic_grads)
+    agent_state = agent_state._replace(critic_network_state=critic_state)
+
+    (actor_loss, log_prob), actor_grads = jax.value_and_grad(actor_loss_fn, has_aux=True)(agent_state.actor_network_state.params, agent_state, batch, actor_rng)
     actor_state = agent_state.actor_network_state.apply_gradients(grads=actor_grads)
+    agent_state = agent_state._replace(actor_network_state=actor_state)
 
     alpha_loss, alpha_grads = jax.value_and_grad(alpha_loss_fn)(agent_state.alpha_state.params, agent_state, log_prob)
     alpha_state = agent_state.alpha_state.apply_gradients(grads=alpha_grads)
+    agent_state = agent_state._replace(alpha_state=alpha_state)
 
     new_target_params = soft_update_target_params(agent_state, agent_state.agent_config.tau)
+    agent_state = agent_state._replace(target_critic_params=new_target_params)
 
-    agent_state = agent_state._replace(
-        actor_network_state=actor_state,
-        critic_network_state=critic_state,
-        alpha_state=alpha_state,
-        target_critic_params=new_target_params,
-    )
     return agent_state, {
         "critic_loss": critic_loss,
         "actor_loss": actor_loss,
