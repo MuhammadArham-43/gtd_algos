@@ -1,3 +1,4 @@
+import jax
 import flax.linen as nn 
 from typing import Optional, Tuple, Union, Any, Sequence, Dict, Callable,Iterable
 from flax.linen.initializers import constant, orthogonal
@@ -11,9 +12,14 @@ from gtd_algos.src.nets.MLP import MLP,sparse_init
 # Seperate Actor and Critic Networks (PPO Nets) #
 #######################################
 
-act_funcs = {'relu': nn.relu, 
-               'tanh': nn.tanh, 
-               'leaky_relu': nn.leaky_relu}
+LOG_STD_MIN = -20
+LOG_STD_MAX = 2
+
+act_funcs = {
+    'relu': nn.relu, 
+    'tanh': nn.tanh, 
+    'leaky_relu': nn.leaky_relu
+}
 
 class Actor(nn.Module):
     """Actor Network: Gaussian Policy with independent Diagonal Covariance Matrix"""
@@ -58,4 +64,42 @@ class Critic(nn.Module):
         return jnp.squeeze(critic, axis=-1)
 
 
+class SACContinousActor(nn.Module):
+    action_dim: int
+    d_actor: Iterable[int]
+    activation: str = "tanh"
+    layer_norm: bool = False
+    kernel_init: Callable = orthogonal(scale = jnp.sqrt(2))
+    kernel_init_last: Callable = orthogonal(0.01)
+    bias_init: Callable = constant(0.0)
 
+    @nn.compact
+    def __call__(self, obs, rng, deterministic: bool = False):
+        activation = act_funcs[self.activation]
+        x = MLP(
+            hiddens=self.d_actor,
+            act=activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            pre_act_norm=self.layer_norm,
+        )(obs)
+        x = activation(x)
+
+        mean = nn.Dense(self.action_dim, kernel_init=self.kernel_init_last, bias_init=constant(0.0))(x)
+        log_std = nn.Dense(self.action_dim, kernel_init=self.kernel_init_last, bias_init=constant(0.0))(x)
+        
+        if deterministic:
+            return jnp.tanh(mean), None
+
+        log_std = jnp.clip(log_std, LOG_STD_MIN, LOG_STD_MAX)
+        std = jnp.exp(log_std)
+
+        eps = jax.random.normal(rng, mean.shape)
+        z = mean + std * eps
+        
+        action = jnp.tanh(z)
+        log_prob = (
+            jnp.sum(-0.5 * (( z - mean) / std) ** 2 - log_std - 0.5 * jnp.log(2 * jnp.pi), axis=-1)
+        )
+        log_prob -= jnp.sum(2 * (jnp.log(2) - z - jax.nn.softplus(-2 * z)), axis=-1)
+        return action, log_prob

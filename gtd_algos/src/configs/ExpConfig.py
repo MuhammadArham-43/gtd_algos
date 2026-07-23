@@ -1,4 +1,4 @@
-from .utils import transform_dict, flax_struct_to_dict
+from .utils import transform_dict, flax_struct_to_dict, apply_overrides
 from flax import struct
 import typing as t
 import argparse
@@ -15,6 +15,7 @@ class ExpConfig:
     algo: str = struct.field(pytree_node=False)
     agent_config: Config = struct.field(pytree_node=False)
     env_config: Config = struct.field(pytree_node=False)
+    run_name: str = struct.field(pytree_node=False, default='')
 
     @classmethod
     def from_dict(cls: t.Type["ExpConfig"], obj: dict):
@@ -25,6 +26,7 @@ class ExpConfig:
             algo=obj["algo"],
             agent_config=Config.from_dict(obj["agent_config"]),
             env_config=Config.from_dict(obj["env_config"]),
+            run_name=obj.get("run_name", ''),
         )
 
     def to_dict(self, expand: bool = True):
@@ -34,7 +36,9 @@ class ExpConfig:
         return transform_dict(exp_dict, expand)
 
     @staticmethod
-    def from_yaml(config_file: str = 'configs/gymnax_config.yaml'):
+    def from_yaml(config_file: str = 'configs/gymnax_config.yaml', overrides: t.Sequence[str] = None):
         with open(config_file, "r") as stream:
-            config = yaml.safe_load(stream)    
+            config = yaml.safe_load(stream)
+        if overrides:
+            config = apply_overrides(config, overrides)
         return ExpConfig.from_dict(config)

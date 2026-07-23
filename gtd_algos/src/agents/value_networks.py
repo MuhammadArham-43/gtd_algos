@@ -2,7 +2,7 @@ from abc import abstractmethod
 from typing import Callable, Iterable
 
 import flax.linen as nn
-from flax.linen.initializers import constant
+from flax.linen.initializers import constant, orthogonal
 import jax.numpy as jnp
 
 from gtd_algos.src.nets.MLP import MLP, layer_norm
@@ -85,3 +85,83 @@ class MinAtarQNetwork(QNetwork):
         if no_batch_dim:
             x = jnp.squeeze(x, axis=0)
         return x
+
+class DoubleQNetwork(QNetwork):
+    """Double Q-network: two Q-networks for double Q-learning"""
+    hiddens: Iterable[int] = ()
+
+    def __call__(self, x):
+        q1 = DenseQNetwork(
+            action_dim=self.action_dim,
+            layer_norm=self.layer_norm,
+            activation=self.activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            hiddens=self.hiddens,
+        )(x)
+        q2 = DenseQNetwork(
+            action_dim=self.action_dim,
+            layer_norm=self.layer_norm,
+            activation=self.activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            hiddens=self.hiddens,
+        )(x)
+        return q1, q2
+
+class QNetworkContinuousAction(nn.Module):
+    """Action-value function: Q(s,a) for continuous action spaces"""
+    layer_norm: bool = False
+    activation: str = "relu"
+    kernel_init: Callable = orthogonal(jnp.sqrt(2))
+    bias_init: Callable = constant(0.0)
+
+    @nn.compact
+    def __call__(self, obs, action):
+        raise NotImplementedError("This method should be implemented in subclasses.")
+
+class DenseQNetworkContinuousAction(QNetworkContinuousAction):
+    hiddens: Iterable[int] = ()
+
+    @nn.compact
+    def __call__(self, obs, action):
+        no_batch_dim = (obs.ndim == 1)
+        if no_batch_dim:
+            obs = obs[None]
+            action = action[None]
+        activation = act_funcs[self.activation]
+        x = jnp.concatenate([obs, action], axis=-1)
+        x = MLP(
+            hiddens=self.hiddens,
+            act=activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            pre_act_norm=self.layer_norm,
+        )(x)
+        x = activation(x)
+        x = nn.Dense(1, kernel_init=self.kernel_init, bias_init=constant(0.0))(x)
+        x = jnp.squeeze(x, -1)
+        if no_batch_dim:
+            x = jnp.squeeze(x, axis=0)
+        return x
+
+class DenseDoubleQNetworkContinuousAction(QNetworkContinuousAction):
+    hiddens: Iterable[int] = ()
+
+    @nn.compact
+    def __call__(self, obs, action):
+        q1 = DenseQNetworkContinuousAction(
+            layer_norm=self.layer_norm,
+            activation=self.activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            hiddens=self.hiddens,
+        )(obs, action)
+        q2 = DenseQNetworkContinuousAction(
+            layer_norm=self.layer_norm,
+            activation=self.activation,
+            kernel_init=self.kernel_init,
+            bias_init=self.bias_init,
+            hiddens=self.hiddens,
+        )(obs, action)
+        return q1, q2

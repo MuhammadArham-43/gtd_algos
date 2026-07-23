@@ -1,0 +1,30 @@
+tag: 'mujoco'
+wandb_project_name: 'mujoco_sac_defaults'
+exp_seed: 0
+algo: sac
+
+env_config:
+  env_name: "HalfCheetah-v4"
+  continuous_action: true
+  normalize_obs: false        # SAC is robust without obs normalisation
+  normalize_reward: false
+  env_seed: 0
+
+agent_config:
+  gamma: 0.99
+  tau: 0.005                  # Polyak coefficient
+  total_steps: 1_000_000
+  warmup_steps: 10_000
+  batch_size: 256
+  update_steps: 1             # 1 gradient step per env step
+  buffer_capacity: 1_000_000
+  d_actor_repr: [256, 256]
+  d_critic_repr: [256, 256]
+  activation: relu
+  actor_lr: 0.0003
+  critic_lr: 0.0003
+  alpha_lr: 0.0003
+  gradient_clipping: false
+  max_grad_norm: 10.0
+  layer_norm_actor: true
+  layer_norm_critic: true
