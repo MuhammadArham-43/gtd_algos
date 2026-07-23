@@ -88,8 +88,9 @@ def init_agent_state(agent_config: Config, action_dim: int, obs_shape: tuple, co
 
 @jax.jit
 def agent_step(agent_state: AgentState, obs: jnp.ndarray, rng: PRNGKey) :
-    action, log_prob = agent_state.actor_network_state.apply_fn(agent_state.actor_network_state.params, obs, rng)
-    return action
+    rng, _rng = jax.random.split(rng)
+    action, log_prob = agent_state.actor_network_state.apply_fn(agent_state.actor_network_state.params, obs, _rng)
+    return action, rng
 
 def critic_loss_fn(critic_params, agent_state: AgentState, batch: BufferTransition, rng: PRNGKey):
     obs, action, reward, next_obs, done, termination = batch
@@ -161,7 +162,7 @@ def wandb_sac_logging(result):
 
     log_dict = {'env_steps': env_steps}
 
-    if loss_info:
+    if result.get('updated'):
         log_dict.update({
             'critic_loss': float(loss_info['critic_loss']),
             'actor_loss':  float(loss_info['actor_loss']),

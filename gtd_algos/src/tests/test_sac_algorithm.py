@@ -112,20 +112,20 @@ def test_init_alpha_state_is_trainstate(agent_state):
 
 def test_agent_step_action_shape(agent_state):
     obs = jnp.ones((BATCH_SIZE, OBS_DIM))
-    action = agent_step(agent_state, obs, jax.random.PRNGKey(0))
+    action, _ = agent_step(agent_state, obs, jax.random.PRNGKey(0))
     assert action.shape == (BATCH_SIZE, ACTION_DIM)
 
 
 def test_agent_step_action_in_tanh_range(agent_state):
     obs = jnp.ones((BATCH_SIZE, OBS_DIM))
-    action = agent_step(agent_state, obs, jax.random.PRNGKey(0))
+    action, _ = agent_step(agent_state, obs, jax.random.PRNGKey(0))
     assert jnp.all(action > -1.0) and jnp.all(action < 1.0)
 
 
 def test_agent_step_stochastic(agent_state):
     obs = jnp.ones((BATCH_SIZE, OBS_DIM))
-    a1 = agent_step(agent_state, obs, jax.random.PRNGKey(0))
-    a2 = agent_step(agent_state, obs, jax.random.PRNGKey(1))
+    a1, _ = agent_step(agent_state, obs, jax.random.PRNGKey(0))
+    a2, _ = agent_step(agent_state, obs, jax.random.PRNGKey(1))
     assert not jnp.allclose(a1, a2), "different RNGs must produce different actions"
 
 

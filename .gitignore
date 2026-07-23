@@ -13,3 +13,5 @@ sbatch
 jobs/
 results/
 runs/
+.claude
+.pytest_cache
